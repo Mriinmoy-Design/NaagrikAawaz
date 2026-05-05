@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NagrikAwaz — Civic Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ── DESIGN TOKENS (from DESIGN-opencode_ai.md) ── */
+:root {
+  --ink: #201d1d;
+  --ink-deep: #0f0000;
+  --charcoal: #302c2c;
+  --body-color: #424245;
+  --mute: #646262;
+  --stone: #6e6e73;
+  --ash: #9a9898;
+  --canvas: #fdfcfc;
+  --surface-soft: #f8f7f7;
+  --surface-card: #f1eeee;
+  --surface-dark: #201d1d;
+  --surface-dark-elevated: #302c2c;
+  --hairline: rgba(15,0,0,0.12);
+  --hairline-strong: #646262;
+  --on-dark: #fdfcfc;
+  --on-dark-mute: #9a9898;
+  --accent: #007aff;
+  --accent-hover: #0056b3;
+  --warning: #ff9f0a;
+  --danger: #ff3b30;
+  --success: #30d158;
+  --font: 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
+  --r-sm: 4px;
+  --r-full: 9999px;
+  --section: 72px;
+}
+.dark {
+  --ink: #fdfcfc;
+  --ink-deep: #ffffff;
+  --charcoal: #e8e4e4;
+  --body-color: #c8c5c5;
+  --mute: #9a9898;
+  --stone: #8e8e93;
+  --ash: #646262;
+  --canvas: #141111;
+  --surface-soft: #1c1919;
+  --surface-card: #242020;
+  --surface-dark: #fdfcfc;
+  --surface-dark-elevated: #f1eeee;
+  --hairline: rgba(255,255,255,0.10);
+  --hairline-strong: #9a9898;
+  --on-dark: #141111;
+  --on-dark-mute: #646262;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.55;
+  transition: background 0.25s, color 0.25s;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-soft); }
+::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 3px; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+  min-height: 64px;
+  display: flex; align-items: center;
+  padding: 10px 32px;
+  gap: 18px;
+  transition: background 0.25s;
+}
+.nav-wordmark {
+  font-size: 15px; font-weight: 700; letter-spacing: 0;
+  white-space: nowrap; color: var(--ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav-links { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+.nav-link {
+  color: var(--mute); font-size: 13px; font-weight: 500;
+  padding: 8px 10px; text-decoration: none; border: none;
+  background: transparent; cursor: pointer; font-family: var(--font);
+  transition: color 0.15s;
+}
+.nav-link:hover, .nav-link.active { color: var(--ink); }
+.nav-link.active { background: var(--surface-soft); border-radius: var(--r-sm); }
+
+.nav-right { display: flex; align-items: center; gap: 8px; margin-left: 16px; }
+
+/* Theme Toggle */
+.theme-toggle {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  cursor: pointer; font-family: var(--font); font-size: 12px;
+  color: var(--mute); font-weight: 500;
+  transition: all 0.15s;
+}
+.theme-toggle:hover { color: var(--ink); }
+
+.btn-primary {
+  background: var(--ink); color: var(--canvas);
+  border: none; border-radius: var(--r-sm);
+  padding: 0 18px; min-height: 38px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font); font-size: 14px; font-weight: 700; line-height: 1.2;
+  cursor: pointer; transition: background 0.15s; white-space: nowrap; text-decoration: none;
+}
+.btn-primary:hover { background: var(--ink-deep); }
+.btn-secondary {
+  background: var(--canvas); color: var(--ink);
+  border: 1px solid var(--hairline-strong); border-radius: var(--r-sm);
+  padding: 0 18px; min-height: 38px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font); font-size: 14px; font-weight: 700; line-height: 1.2;
+  cursor: pointer; transition: all 0.15s; text-decoration: none;
+}
+.btn-secondary:hover { background: var(--surface-soft); }
+.btn-sm {
+  padding: 0 12px; min-height: 30px; font-size: 12px;
+}
+
+/* ── LAYOUT ── */
+main { padding-top: 64px; }
+.container { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+.section { padding: var(--section) 0; border-top: 1px solid var(--hairline); }
+.section-label {
+  font-size: 14px; font-weight: 700;
+  margin-bottom: 14px; color: var(--ink);
+}
+
+/* ── HERO ── */
+.hero {
+  background: var(--surface-dark);
+  color: var(--on-dark);
+  padding: 56px 32px 44px;
+}
+.hero-inner { max-width: 1120px; margin: 0 auto; }
+.hero-title {
+  font-size: clamp(30px, 4vw, 48px); font-weight: 700; line-height: 1.18;
+  color: var(--on-dark); margin-bottom: 16px;
+  min-height: 1.2em;
+}
+.typing-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.typing-caret {
+  display: inline-block;
+  width: 0.12em;
+  height: 0.9em;
+  margin-left: 4px;
+  background: var(--on-dark);
+  animation: caretBlink 0.8s steps(1) infinite;
+}
+@keyframes caretBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.hero-sub {
+  font-size: 16px; color: var(--on-dark-mute); margin-bottom: 24px;
+  max-width: 720px;
+}
+
+.hero-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--hairline);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r-sm);
+  overflow: hidden; margin-top: 28px; max-width: 720px;
+}
+.hero-stat {
+  background: var(--surface-dark); padding: 16px;
+  text-align: center;
+}
+.hero-stat-num { font-size: 24px; font-weight: 700; color: var(--on-dark); }
+.hero-stat-label { font-size: 12px; color: var(--on-dark-mute); margin-top: 2px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero .btn-primary {
+  background: var(--on-dark);
+  color: var(--surface-dark);
+}
+.hero .btn-primary:hover { background: #ffffff; }
+.hero .btn-secondary {
+  color: var(--on-dark);
+  background: transparent;
+  border-color: rgba(255,255,255,0.25);
+}
+.hero .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+
+/* ── TABS ── */
+.tab-strip {
+  display: flex; border-bottom: 1px solid var(--hairline-strong);
+  overflow-x: auto; gap: 6px;
+  padding-bottom: 2px;
+}
+.tab-btn {
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  padding: 10px 12px; font-family: var(--font); font-size: 13px; font-weight: 700;
+  color: var(--mute); cursor: pointer; white-space: nowrap;
+  transition: color 0.15s;
+}
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+.tab-btn:hover { color: var(--ink); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.tab-shell { margin-top: 28px; }
+.tab-panel { padding: 32px 0 8px; }
+.page-stack { display: grid; gap: 32px; }
+.dashboard-metrics { margin-bottom: 44px; }
+.dashboard-breakdown { gap: 44px; margin-bottom: 34px; align-items: start; }
+.trust-grid { margin-bottom: 48px; }
+.trust-intro { margin-bottom: 30px; }
+.trust-intro .section-label { margin-bottom: 18px; }
+.trust-formula { display: block; margin-top: 6px; }
+.dept-trust-section { margin-top: 4px; }
+.report-grid { gap: 56px !important; align-items: start; }
+.report-stack { display: grid; gap: 28px; }
+.report-actions { display: flex; gap: 12px; margin-top: 4px; }
+.map-preview { height: 300px !important; border-radius: var(--r-sm); border: 1px solid var(--hairline); }
+.upload-dropzone {
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-sm);
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--mute);
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--surface-soft);
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 18px;
+}
+.card,
+.complaint-card,
+.trust-score-card,
+.impact-row,
+.predict-card,
+.pattern-row,
+.person-card,
+.list-row {
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.is-clickable {
+  cursor: pointer;
+}
+.is-clickable:hover {
+  border-color: var(--hairline-strong);
+  background: var(--surface-card);
+}
+.is-clickable:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.is-expanded {
+  border-color: var(--ink) !important;
+  background: var(--canvas);
+}
+.expand-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  color: var(--body-color);
+  font-size: 13px;
+}
+.expand-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.expand-metric {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: 10px;
+}
+.expand-label { font-size: 11px; color: var(--mute); margin-bottom: 4px; }
+.expand-value { font-size: 15px; font-weight: 700; color: var(--ink); }
+.inline-action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.rating-btn {
+  border: 1px solid var(--hairline);
+  background: var(--surface-soft);
+  color: var(--ink);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.rating-btn:hover,
+.rating-btn.active {
+  background: var(--ink);
+  color: var(--canvas);
+}
+.card-dark {
+  background: var(--surface-dark); color: var(--on-dark);
+  border-radius: var(--r-sm); padding: 16px;
+}
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+
+/* ── MAP ── */
+#map { height: 420px; border-radius: var(--r-sm); border: 1px solid var(--hairline); }
+.map-controls {
+  display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.map-layer-btn {
+  background: var(--surface-card); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 4px 12px;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--mute); cursor: pointer; transition: all 0.15s;
+}
+.map-layer-btn.active { background: var(--ink); color: var(--canvas); border-color: var(--ink); }
+
+/* ── COMPLAINT FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 14px; font-weight: 500; color: var(--mute); margin-bottom: 6px; display: block; }
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--surface-soft); color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 10px 12px;
+  font-family: var(--font); font-size: 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none; border-color: var(--ink); background: var(--canvas);
+}
+.form-textarea { min-height: 80px; resize: vertical; }
+.form-select { cursor: pointer; }
+
+/* Category grid */
+.category-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+  margin-bottom: 16px;
+}
+.cat-btn {
+  background: var(--surface-card); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 14px 8px;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--mute); cursor: pointer; transition: all 0.15s;
+  text-align: center;
+}
+.cat-btn:hover, .cat-btn.selected {
+  background: var(--ink); color: var(--canvas); border-color: var(--ink);
+}
+.cat-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+/* ── VOICE INPUT ── */
+.voice-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-card); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 9px 14px;
+  font-family: var(--font); font-size: 14px; font-weight: 500;
+  color: var(--mute); cursor: pointer; transition: all 0.15s;
+}
+.voice-btn.recording {
+  background: var(--danger); color: white; border-color: var(--danger);
+  animation: pulse 1s infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+
+/* ── COMPLAINT CARD ── */
+.complaint-card {
+  background: var(--canvas); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 20px; margin-bottom: 16px;
+  transition: border-color 0.15s;
+}
+.complaint-card:hover { border-color: var(--hairline-strong); }
+.complaint-id { font-size: 12px; color: var(--mute); }
+.complaint-title { font-weight: 700; margin: 4px 0; }
+.complaint-meta { font-size: 12px; color: var(--mute); display: flex; gap: 16px; flex-wrap: wrap; }
+.people-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.person-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-soft);
+  padding: 14px;
+  text-align: center;
+}
+.person-photo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--canvas);
+  box-shadow: 0 0 0 1px var(--hairline);
+  display: block;
+  margin: 0 auto 10px;
+}
+.person-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.person-role { font-size: 11px; color: var(--mute); margin-top: 2px; }
+.status-badge {
+  display: inline-block; padding: 2px 8px; border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 500;
+}
+.status-filed { background: var(--surface-card); color: var(--mute); }
+.status-assigned { background: rgba(0,122,255,0.15); color: var(--accent); }
+.status-wip { background: rgba(255,159,10,0.15); color: var(--warning); }
+.status-resolved { background: rgba(48,209,88,0.15); color: var(--success); }
+.status-critical { background: rgba(255,59,48,0.15); color: var(--danger); }
+
+/* ── TRUST SCORE ── */
+.trust-score-card {
+  border: 1px solid var(--hairline); border-radius: var(--r-sm); padding: 28px 26px;
+  background: var(--surface-soft);
+  min-height: 220px;
+}
+.trust-score-num {
+  font-size: 52px; font-weight: 700; line-height: 1;
+  margin: 10px 0 12px;
+}
+.trust-bar {
+  height: 6px; background: var(--surface-card); border-radius: 3px; margin: 12px 0 14px;
+  overflow: hidden;
+}
+.trust-fill {
+  height: 100%; border-radius: 3px; transition: width 0.6s ease;
+}
+.trust-reliable { background: var(--success); }
+.trust-delayed { background: var(--warning); }
+.trust-critical { background: var(--danger); }
+.trust-label {
+  font-size: 12px; font-weight: 700; padding: 2px 8px;
+  border-radius: var(--r-sm); display: inline-block;
+}
+
+/* ── TIMELINE / LIFECYCLE ── */
+.timeline { padding-left: 0; position: relative; }
+.timeline-item {
+  display: flex; gap: 14px; margin-bottom: 18px; position: relative;
+}
+.timeline-dot-col {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0; width: 24px;
+}
+.timeline-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 4px; border: 2px solid var(--canvas);
+  box-shadow: 0 0 0 2px currentColor;
+}
+.timeline-line {
+  width: 1px; flex: 1; background: var(--hairline); margin-top: 4px; min-height: 20px;
+}
+.timeline-content { flex: 1; padding-bottom: 4px; }
+.timeline-day { font-size: 12px; color: var(--mute); }
+.timeline-event { font-weight: 500; margin: 2px 0; }
+.timeline-note { font-size: 13px; color: var(--mute); }
+.tl-done { color: var(--success); }
+.tl-active { color: var(--accent); }
+.tl-pending { color: var(--ash); }
+.tl-escalated { color: var(--danger); }
+
+/* ── ESCALATION LADDER ── */
+.escalation-rung {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--hairline);
+}
+.escalation-rung:last-child { border-bottom: none; }
+.esc-day {
+  font-size: 12px; font-weight: 700; width: 52px;
+  color: var(--mute); flex-shrink: 0;
+}
+.esc-label { flex: 1; font-size: 14px; }
+.esc-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: var(--r-full);
+  font-weight: 500; flex-shrink: 0;
+}
+
+/* ── LIST ROW (design system) ── */
+.list-row {
+  padding: 10px 0; border-bottom: 1px solid var(--hairline);
+  font-size: 14px; color: var(--body-color); display: flex; gap: 12px;
+}
+.list-marker { color: var(--mute); flex-shrink: 0; }
+.list-content { flex: 1; }
+.list-strong { font-weight: 700; color: var(--ink); }
+
+/* ── IMPACT BANNER ── */
+.impact-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px; background: var(--surface-soft);
+  border: 1px solid var(--hairline); border-radius: var(--r-sm); margin-bottom: 12px;
+}
+.impact-icon { font-size: 24px; flex-shrink: 0; }
+.impact-text { font-size: 14px; }
+.impact-num { font-size: 22px; font-weight: 700; color: var(--ink); }
+
+/* ── AI PANEL ── */
+.ai-panel {
+  background: var(--surface-dark); color: var(--on-dark);
+  border-radius: var(--r-sm); padding: 18px;
+}
+.ai-panel-title { font-weight: 700; font-size: 14px; color: var(--on-dark-mute); margin-bottom: 12px; }
+.ai-insight {
+  background: var(--surface-dark-elevated); border-radius: var(--r-sm);
+  padding: 10px 14px; margin-bottom: 8px;
+  font-size: 13px; color: var(--on-dark);
+}
+.ai-tag { font-size: 11px; color: var(--on-dark-mute); margin-bottom: 4px; }
+.ai-text { color: var(--on-dark); }
+.ai-loading {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--on-dark-mute); font-size: 14px;
+}
+.spinner {
+  width: 14px; height: 14px; border: 2px solid var(--on-dark-mute);
+  border-top-color: var(--on-dark); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── COLLECTIVE ISSUE BOX ── */
+.collective-box {
+  background: rgba(0,122,255,0.07); border: 1px solid rgba(0,122,255,0.2);
+  border-radius: var(--r-sm); padding: 14px;
+}
+.collective-count { font-size: 24px; font-weight: 700; color: var(--accent); }
+
+/* ── CHART (ASCII-inspired sparkline) ── */
+.chart-tile {
+  padding: 16px; border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  background: var(--canvas);
+}
+.chart-label { font-size: 12px; color: var(--mute); margin-top: 8px; }
+canvas.sparkline { display: block; }
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  display: flex; gap: 10px; margin-bottom: 20px;
+}
+.search-bar .form-input { flex: 1; }
+
+/* ── NOTIFY BANNER ── */
+.notify-banner {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--surface-dark); color: var(--on-dark);
+  border-radius: var(--r-sm); padding: 12px 20px;
+  font-size: 14px; max-width: 320px;
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 2000; transform: translateY(80px); opacity: 0;
+  transition: all 0.3s;
+}
+.notify-banner.show { transform: translateY(0); opacity: 1; }
+
+/* ── WARD SELECTOR ── */
+.ward-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ward-chip {
+  font-size: 12px; padding: 2px 10px; border-radius: var(--r-full);
+  border: 1px solid var(--hairline); background: var(--surface-card);
+  color: var(--mute); cursor: pointer; transition: all 0.15s; font-family: var(--font);
+}
+.ward-chip.active { background: var(--ink); color: var(--canvas); border-color: var(--ink); }
+
+/* ── LANGUAGE STRIP ── */
+.lang-strip {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.lang-btn {
+  font-size: 12px; padding: 2px 10px; border-radius: var(--r-full);
+  border: 1px solid var(--hairline); background: var(--surface-card);
+  color: var(--mute); cursor: pointer; transition: all 0.15s; font-family: var(--font);
+}
+.lang-btn.active { background: var(--ink); color: var(--canvas); border-color: var(--ink); }
+
+/* ── ICON REPORT MODE ── */
+.icon-report-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;
+}
+.icon-report-btn {
+  background: var(--surface-soft); border: 2px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 20px 12px; text-align: center;
+  cursor: pointer; transition: all 0.15s; font-family: var(--font);
+}
+.icon-report-btn:hover, .icon-report-btn.selected {
+  border-color: var(--accent); background: rgba(0,122,255,0.07);
+}
+.icon-report-btn .big-icon { font-size: 36px; display: block; margin-bottom: 8px; }
+.icon-report-btn span { font-size: 13px; font-weight: 500; color: var(--ink); }
+.simple-voice-block {
+  text-align: center;
+  margin: 52px 0 34px;
+  padding-top: 8px;
+}
+.simple-voice-block .voice-btn {
+  margin: 0 auto;
+  font-size: 18px;
+  padding: 18px 36px;
+  justify-content: center;
+}
+.simple-voice-status {
+  margin-top: 16px;
+}
+
+/* ── PREDICTIVE CARD ── */
+.predict-card {
+  background: var(--surface-dark); color: var(--on-dark);
+  border-radius: var(--r-sm); padding: 14px;
+  display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px;
+}
+.predict-icon { font-size: 20px; flex-shrink: 0; }
+.predict-content { flex: 1; }
+.predict-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.predict-detail { font-size: 12px; color: var(--on-dark-mute); }
+.predict-confidence {
+  font-size: 11px; background: var(--surface-dark-elevated);
+  padding: 2px 8px; border-radius: var(--r-sm); color: var(--on-dark-mute);
+  flex-shrink: 0; align-self: flex-start; margin-top: 2px;
+}
+
+/* ── HEATMAP LEGEND ── */
+.heatmap-legend {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--mute);
+}
+.heatmap-grad {
+  width: 100px; height: 10px; border-radius: 5px;
+  background: linear-gradient(to right, rgba(48,209,88,0.6), rgba(255,159,10,0.7), rgba(255,59,48,0.9));
+}
+
+/* ── PATTERN INSIGHT ── */
+.pattern-row {
+  padding: 10px 0; border-bottom: 1px solid var(--hairline);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pattern-row:last-child { border-bottom: none; }
+.pattern-desc { font-size: 13px; color: var(--body-color); }
+.pattern-num { font-size: 20px; font-weight: 700; color: var(--ink); }
+
+/* ── DEPT WORKLOAD ── */
+.workload-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.workload-label { font-size: 12px; width: 100px; flex-shrink: 0; color: var(--mute); }
+.workload-track { flex: 1; height: 6px; background: var(--surface-card); border-radius: 3px; overflow: hidden; }
+.workload-fill { height: 100%; border-radius: 3px; }
+
+/* ── RESPONSIVE ── */
+@media(max-width: 768px) {
+  body { font-size: 14px; }
+  nav { padding: 8px 16px; min-height: 60px; gap: 12px; }
+  .container { padding: 0 16px; }
+  .hero { padding: 40px 16px 36px; }
+  .section { padding: 48px 0; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .category-grid { grid-template-columns: repeat(3, 1fr); }
+  .hero-stats { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .nav-wordmark { font-size: 12px; }
+  .nav-right { margin-left: auto; }
+  .theme-toggle { padding: 4px 8px; font-size: 11px; }
+  main { padding-top: 60px; }
+  .search-bar { flex-direction: column; }
+  .search-bar .form-select { width: 100% !important; }
+  .icon-report-grid { grid-template-columns: repeat(2, 1fr); }
+  .simple-voice-block { margin-top: 42px; }
+  .people-strip { grid-template-columns: 1fr; }
+  .report-grid, .dashboard-breakdown { gap: 28px !important; }
+  .dashboard-metrics, .trust-grid { margin-bottom: 34px; }
+  .trust-score-card { min-height: 0; padding: 24px 20px; }
+  .expand-panel-grid { grid-template-columns: 1fr; }
+}
+
+/* ── UTILS ── */
+.text-mute { color: var(--mute); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
+.text-accent { color: var(--accent); }
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 12px; }
+.fw-700 { font-weight: 700; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.flex-gap-8 { display: flex; gap: 8px; align-items: center; }
+.flex-gap-16 { display: flex; gap: 16px; align-items: center; }
+.gap-8 { gap: 8px; }
+.wrap { flex-wrap: wrap; }
+.footer-links { display: flex; gap: 4px; flex-wrap: wrap; }
+.footer-link { color: var(--mute); font-size: 13px; padding: 8px 10px; text-decoration: none; }
+.footer-link:hover { color: var(--ink); }
+
+/* custom scrollbar for code */
+pre {
+  background: var(--surface-card); padding: 12px; border-radius: var(--r-sm);
+  font-size: 12px; color: var(--body-color); overflow-x: auto;
+  border: 1px solid var(--hairline);
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav id="main-nav">
+  <a href="#report" class="nav-wordmark" onclick="showTab('report');return false;">NaagrikAwaaz</a>
+  <div class="nav-links">
+    <button class="nav-link active" data-tab="report" onclick="showTab('report')">Report</button>
+    <button class="nav-link" data-tab="map" onclick="showTab('map')">Map</button>
+    <button class="nav-link" data-tab="dashboard" onclick="showTab('dashboard')">Dashboard</button>
+    <button class="nav-link" data-tab="complaints" onclick="showTab('complaints')">My Issues</button>
+    <button class="nav-link" data-tab="trust" onclick="showTab('trust')">Trust Score</button>
+    <button class="nav-link" data-tab="predict" onclick="showTab('predict')">AI Insights</button>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">
+      ◑ Dark
+    </button>
+    <button class="btn-primary btn-sm" onclick="showTab('report')">File Issue</button>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<main>
+<div class="hero">
+  <div class="hero-inner">
+    <h1 class="hero-title" aria-live="polite">
+      <span class="typing-title"><span id="hero-typing">Naagrik Awaaz</span><span class="typing-caret" aria-hidden="true"></span></span>
+    </h1>
+    <p class="hero-sub">Not just a complaint box. A system that makes governance transparent, accountable, and predictable — for every citizen of India.</p>
+    <div class="hero-actions">
+      <button class="btn-primary hero-report-cta" onclick="showTab('report')">Report Issue</button>
+      <button class="btn-secondary" onclick="showTab('map')">View Map</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="stat-total">2,847</div>
+        <div class="hero-stat-label">Issues filed</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="stat-resolved">1,923</div>
+        <div class="hero-stat-label">Resolved</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="stat-days">8.4d</div>
+        <div class="hero-stat-label">Avg. resolution</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TABS ── -->
+<div class="container">
+  <div class="tab-shell" id="report">
+    <div class="tab-strip">
+      <button class="tab-btn active" onclick="switchTab(this,'t-report')">📍 Report Issue</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-map')">🗺️ Problem Map</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-dashboard')">📊 Dashboard</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-complaints')">📋 My Issues</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-trust')">🧾 Trust Scores</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-predict')">🤖 AI Insights</button>
+      <button class="tab-btn" onclick="switchTab(this,'t-simple')">🗣️ Simple Mode</button>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: REPORT ISSUE           ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-report" class="tab-content tab-panel active">
+
+      <!-- Collective engine -->
+      <div class="collective-box mb-16">
+        <div class="flex-between mb-8">
+          <div>
+            <span class="collective-count">87</span>
+            <span class="text-mute text-sm"> citizens already reported this issue</span>
+          </div>
+          <button class="btn-primary btn-sm" onclick="joinIssue()">Join Issue →</button>
+        </div>
+        <div class="text-sm text-mute">[!] Pothole cluster detected near Jayanagar 4th Block — <strong style="color:var(--accent)">join existing complaint</strong> instead of filing new</div>
+      </div>
+
+      <div class="grid-2 report-grid">
+        <!-- LEFT: Form -->
+        <div class="report-stack">
+          <div class="section-label">[+] File New Complaint</div>
+
+          <!-- Category icons -->
+          <div class="form-label">Select Category</div>
+          <div class="category-grid">
+            <button class="cat-btn selected" onclick="selectCat(this,'🕳️','Pothole')">
+              <span class="cat-icon">🕳️</span>Pothole
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'🗑️','Garbage')">
+              <span class="cat-icon">🗑️</span>Garbage
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'💧','Water')">
+              <span class="cat-icon">💧</span>Water
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'⚡','Electricity')">
+              <span class="cat-icon">⚡</span>Electric
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'🚧','Road')">
+              <span class="cat-icon">🚧</span>Road
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'🌳','Trees')">
+              <span class="cat-icon">🌳</span>Trees
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'🚽','Sanitation')">
+              <span class="cat-icon">🚽</span>Sanitary
+            </button>
+            <button class="cat-btn" onclick="selectCat(this,'🏗️','Other')">
+              <span class="cat-icon">🏗️</span>Other
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-textarea" id="complaint-desc" placeholder="Describe the issue... (or use voice input below)"></textarea>
+          </div>
+
+          <!-- Voice input -->
+          <div class="flex-gap-8 mb-16">
+            <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">
+              🎤 Voice Input
+            </button>
+            <button class="voice-btn" onclick="translateText()">🌐 Translate</button>
+            <div class="lang-strip" style="display:inline-flex;margin:0;">
+              <button class="lang-btn active" onclick="setLang(this,'en')">EN</button>
+              <button class="lang-btn" onclick="setLang(this,'kn')">ಕನ್ನಡ</button>
+              <button class="lang-btn" onclick="setLang(this,'hi')">हिंदी</button>
+              <button class="lang-btn" onclick="setLang(this,'ta')">தமிழ்</button>
+            </div>
+          </div>
+
+          <!-- Image upload -->
+          <div class="form-group">
+            <label class="form-label">📸 Attach Photo</label>
+            <div class="upload-dropzone" onclick="document.getElementById('img-upload').click()">
+              Click to upload or drag image here
+              <input type="file" id="img-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+            </div>
+            <div id="img-preview" style="margin-top:8px;"></div>
+          </div>
+
+          <!-- Location -->
+          <div class="form-group">
+            <div class="flex-between mb-8">
+              <label class="form-label" style="margin:0;">📍 Location</label>
+              <button class="btn-secondary btn-sm" onclick="autoDetectLocation()">Auto-detect</button>
+            </div>
+            <input class="form-input" id="location-input" value="Jayanagar 4th Block, Bengaluru, BBMP Ward 42" placeholder="Address or drop pin on map" oninput="manualLocationUpdate()">
+            <div class="text-xs text-mute mt-8" id="loc-meta">Ward: 42 · Zone: South · Authority: BBMP</div>
+          </div>
+
+          <!-- Estimated resolution -->
+          <div class="card mb-16" style="display:flex;gap:16px;align-items:center;">
+            <div>
+              <div class="text-xs text-mute">Estimated Resolution</div>
+              <div class="fw-700" style="font-size:20px;">7–10 days</div>
+            </div>
+            <div style="flex:1;border-left:1px solid var(--hairline);padding-left:16px;">
+              <div class="text-xs text-mute">Assigned To</div>
+              <div class="text-sm fw-700">BBMP Roads Dept.</div>
+              <div class="text-xs text-mute">Contractor: Pending</div>
+            </div>
+          </div>
+
+          <div class="report-actions">
+            <button class="btn-primary" style="flex:1;" onclick="submitComplaint()">Submit Issue</button>
+            <button class="btn-secondary" onclick="clearForm()">Clear</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: AI Classification + Map preview -->
+        <div class="report-stack">
+          <div class="section-label">[+] AI Classification</div>
+          <div class="ai-panel mb-16" id="ai-classify-panel">
+            <div class="ai-panel-title">// AI_ENGINE · auto-classification</div>
+            <div class="ai-insight">
+              <div class="ai-tag">CATEGORY_DETECTED</div>
+              <div class="ai-text">🕳️ Pothole — Confidence: 94%</div>
+            </div>
+            <div class="ai-insight">
+              <div class="ai-tag">AUTHORITY_ROUTED</div>
+              <div class="ai-text">BBMP Roads &amp; Infrastructure Division</div>
+            </div>
+            <div class="ai-insight">
+              <div class="ai-tag">PATTERN_MATCH</div>
+              <div class="ai-text">18 similar complaints in 500m radius — systemic pattern</div>
+            </div>
+            <div class="ai-insight">
+              <div class="ai-tag">PRIORITY_SCORE</div>
+              <div class="ai-text">High [82/100] — Safety risk + high traffic zone</div>
+            </div>
+            <button class="btn-secondary btn-sm mt-8" onclick="runAIAnalysis()" style="width:100%;">↻ Re-analyze with AI</button>
+          </div>
+
+          <!-- Mini map for pin drop -->
+          <div class="section-label">[+] Drop Pin</div>
+          <div id="mini-map" class="map-preview"></div>
+          <div class="text-xs text-mute mt-8">Click map to drop complaint pin · Drag to adjust</div>
+
+          <!-- System transparency preview -->
+          <div class="mt-16">
+            <div class="section-label">[+] System Context</div>
+            <div class="card">
+              <div class="workload-bar-wrap">
+                <div class="workload-label text-xs">Roads Dept.</div>
+                <div class="workload-track"><div class="workload-fill" style="width:78%;background:var(--warning);"></div></div>
+                <div class="text-xs text-mute">78%</div>
+              </div>
+              <div class="workload-bar-wrap">
+                <div class="workload-label text-xs">Water Dept.</div>
+                <div class="workload-track"><div class="workload-fill" style="width:45%;background:var(--success);"></div></div>
+                <div class="text-xs text-mute">45%</div>
+              </div>
+              <div class="workload-bar-wrap">
+                <div class="workload-label text-xs">Sanitation</div>
+                <div class="workload-track"><div class="workload-fill" style="width:92%;background:var(--danger);"></div></div>
+                <div class="text-xs text-mute">92% !</div>
+              </div>
+              <div class="text-xs text-mute mt-8">[i] Avg resolution in Ward 42: 9.2 days · 234 open complaints</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: MAP                    ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-map" class="tab-content tab-panel">
+      <div class="flex-between mb-16">
+        <div class="section-label" style="margin:0;">[+] Problem Intelligence Map — Bengaluru</div>
+        <div class="heatmap-legend">
+          <span class="text-xs">Low</span>
+          <div class="heatmap-grad"></div>
+          <span class="text-xs">High</span>
+        </div>
+      </div>
+      <div class="map-controls">
+        <button class="map-layer-btn active" onclick="toggleLayer(this,'complaints')">📍 Complaints</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'heatmap')">🔥 Heatmap</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'clusters')">🔵 Clusters</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'systemic')">⚠️ Systemic Zones</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'predict')">🤖 Predicted Zones</button>
+      </div>
+      <div id="map"></div>
+
+      <!-- Pattern insights below map -->
+      <div class="mt-24">
+        <div class="section-label">[+] Pattern Intelligence</div>
+        <div class="grid-2">
+          <div>
+            <div class="pattern-row">
+              <div class="pattern-desc">🕳️ Potholes — Jayanagar area (2 months)</div>
+              <div class="pattern-num text-danger">18</div>
+            </div>
+            <div class="pattern-row">
+              <div class="pattern-desc">🗑️ Garbage overflow — Koramangala weekly spike</div>
+              <div class="pattern-num text-warning">11</div>
+            </div>
+            <div class="pattern-row">
+              <div class="pattern-desc">💧 Water supply — Indiranagar recurring</div>
+              <div class="pattern-num text-accent">7</div>
+            </div>
+            <div class="pattern-row">
+              <div class="pattern-desc">⚡ Power outages — BTM Layout cluster</div>
+              <div class="pattern-num text-warning">9</div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="section-label">[i] Systemic Failure Zones</div>
+              <div class="list-row">
+                <span class="list-marker">[-]</span>
+                <div><span class="list-strong">Jayanagar Block 4</span> — 18 road complaints · poor contractor</div>
+              </div>
+              <div class="list-row">
+                <span class="list-marker">[-]</span>
+                <div><span class="list-strong">Koramangala Sector 5</span> — 11 garbage, weekly pattern</div>
+              </div>
+              <div class="list-row">
+                <span class="list-marker">[-]</span>
+                <div><span class="list-strong">BTM Layout 2nd Stage</span> — 9 power outages, aging infra</div>
+              </div>
+              <div class="list-row">
+                <span class="list-marker">[x]</span>
+                <div><span class="list-strong">Indiranagar 12th Main</span> — Water pipe replacement needed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: DASHBOARD              ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-dashboard" class="tab-content tab-panel">
+      <div class="section-label">[+] Governance Intelligence Dashboard</div>
+
+      <!-- Ward selector -->
+      <div class="ward-chips">
+        <button class="ward-chip active" onclick="selectWard(this,'42')">Ward 42 — Jayanagar</button>
+        <button class="ward-chip" onclick="selectWard(this,'67')">Ward 67 — Koramangala</button>
+        <button class="ward-chip" onclick="selectWard(this,'28')">Ward 28 — Indiranagar</button>
+        <button class="ward-chip" onclick="selectWard(this,'55')">Ward 55 — BTM Layout</button>
+        <button class="ward-chip" onclick="selectWard(this,'all')">All Wards</button>
+      </div>
+
+      <!-- Key metrics -->
+      <div class="grid-3 dashboard-metrics">
+        <div class="card">
+          <div class="text-xs text-mute mb-8">[i] TOTAL FILED (30 days)</div>
+          <div class="fw-700" style="font-size:36px;">2,847</div>
+          <div class="text-xs text-success">↑ 12% from last month</div>
+          <canvas class="sparkline mt-8" id="spark1" width="200" height="48"></canvas>
+          <div class="chart-label">Fig 1. Monthly filing trend</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-mute mb-8">[i] RESOLVED (30 days)</div>
+          <div class="fw-700" style="font-size:36px;">1,923</div>
+          <div class="text-xs text-accent">67.6% resolution rate</div>
+          <canvas class="sparkline mt-8" id="spark2" width="200" height="48"></canvas>
+          <div class="chart-label">Fig 2. Weekly resolutions</div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-mute mb-8">[i] AVG RESOLUTION TIME</div>
+          <div class="fw-700" style="font-size:36px;">8.4d</div>
+          <div class="text-xs text-success">↓ 1.2d improvement</div>
+          <canvas class="sparkline mt-8" id="spark3" width="200" height="48"></canvas>
+          <div class="chart-label">Fig 3. Resolution time trend</div>
+        </div>
+      </div>
+
+      <!-- By category -->
+      <div class="grid-2 dashboard-breakdown">
+        <div>
+          <div class="section-label">[+] By Category</div>
+          <div id="category-bars"></div>
+        </div>
+        <div>
+          <div class="section-label">[+] Department Workload</div>
+          <div class="card">
+            <div class="workload-bar-wrap">
+              <div class="workload-label text-xs">Roads</div>
+              <div class="workload-track"><div class="workload-fill" style="width:78%;background:var(--warning);"></div></div>
+              <div class="text-xs" style="color:var(--warning)">78% · Overloaded</div>
+            </div>
+            <div class="workload-bar-wrap">
+              <div class="workload-label text-xs">Water</div>
+              <div class="workload-track"><div class="workload-fill" style="width:45%;background:var(--success);"></div></div>
+              <div class="text-xs" style="color:var(--success)">45% · Normal</div>
+            </div>
+            <div class="workload-bar-wrap">
+              <div class="workload-label text-xs">Sanitation</div>
+              <div class="workload-track"><div class="workload-fill" style="width:92%;background:var(--danger);"></div></div>
+              <div class="text-xs" style="color:var(--danger)">92% · Critical!</div>
+            </div>
+            <div class="workload-bar-wrap">
+              <div class="workload-label text-xs">Electricity</div>
+              <div class="workload-track"><div class="workload-fill" style="width:61%;background:var(--accent);"></div></div>
+              <div class="text-xs" style="color:var(--accent)">61% · Normal</div>
+            </div>
+            <div class="workload-bar-wrap">
+              <div class="workload-label text-xs">Parks</div>
+              <div class="workload-track"><div class="workload-fill" style="width:33%;background:var(--success);"></div></div>
+              <div class="text-xs" style="color:var(--success)">33% · Good</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Citizen impact -->
+      <div class="section-label">[+] Citizen Impact View</div>
+      <div class="grid-2">
+        <div>
+          <div class="impact-row">
+            <div class="impact-icon">🛣️</div>
+            <div class="impact-text">
+              <div class="impact-num">3</div>
+              Road issues resolved near you this week
+            </div>
+          </div>
+          <div class="impact-row">
+            <div class="impact-icon">🌿</div>
+            <div class="impact-text">
+              <div class="impact-num">+20%</div>
+              Cleanliness improvement — Jayanagar area
+            </div>
+          </div>
+          <div class="impact-row">
+            <div class="impact-icon">💧</div>
+            <div class="impact-text">
+              <div class="impact-num">-35%</div>
+              Water complaints reduced this month
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="impact-row">
+            <div class="impact-icon">👥</div>
+            <div class="impact-text">
+              <div class="impact-num">87</div>
+              Citizens joined the pothole complaint
+            </div>
+          </div>
+          <div class="impact-row">
+            <div class="impact-icon">⚡</div>
+            <div class="impact-text">
+              <div class="impact-num">12h</div>
+              Average response time (down from 48h)
+            </div>
+          </div>
+          <div class="impact-row">
+            <div class="impact-icon">🏆</div>
+            <div class="impact-text">
+              <div class="impact-num">#3</div>
+              Ward 42 ranking in city this month
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: MY ISSUES              ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-complaints" class="tab-content tab-panel">
+      <div class="flex-between mb-16">
+        <div class="section-label" style="margin:0;">[+] Issue Tracker</div>
+        <button class="btn-primary btn-sm" onclick="showTab('report')">New Issue</button>
+      </div>
+
+      <div class="search-bar">
+        <input class="form-input" id="issue-search" placeholder="Search by ID, category, location..." style="flex:1;" oninput="filterComplaints()">
+        <select class="form-select" id="issue-filter" style="width:160px;" onchange="filterComplaints()">
+          <option>All Status</option>
+          <option>Filed</option>
+          <option>Assigned</option>
+          <option>In Progress</option>
+          <option>Resolved</option>
+        </select>
+      </div>
+
+      <!-- Complaint cards -->
+      <div id="complaint-list">
+        <!-- Complaint 1 with lifecycle -->
+        <div class="complaint-card" data-status="wip" data-detail="A live escalation record with officer ownership, contractor accountability, and citizen impact. Click timeline rows or action buttons for more context.">
+          <div class="flex-between mb-8">
+            <div class="complaint-id">#BWA-2025-004821</div>
+            <div class="flex-gap-8">
+              <span class="status-badge status-wip">Work in Progress</span>
+              <span class="status-badge" style="background:rgba(255,59,48,0.1);color:var(--danger);">⚠️ Day 9 — Escalated</span>
+            </div>
+          </div>
+          <div class="complaint-title">🕳️ Large pothole on 4th Cross, Jayanagar — 2ft deep</div>
+          <div class="complaint-meta">
+            <span>📍 Ward 42 · BBMP Roads</span>
+            <span>👥 87 affected</span>
+            <span>📅 Filed: Dec 12, 2025</span>
+          </div>
+
+          <div class="people-strip">
+            <div class="person-card">
+              <img class="person-photo" src="https://images.pexels.com/photos/4307884/pexels-photo-4307884.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=180&amp;h=180&amp;fit=crop" alt="Indian male officer stock portrait">
+              <div class="person-name">Ravi K.</div>
+              <div class="person-role">Assigned officer · BBMP Roads</div>
+            </div>
+            <div class="person-card">
+              <img class="person-photo" src="https://images.pexels.com/photos/30324870/pexels-photo-30324870.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=180&amp;h=180&amp;fit=crop" alt="Indian male supervisor stock portrait">
+              <div class="person-name">Anand Rao</div>
+              <div class="person-role">Supervisor · Deputy EE</div>
+            </div>
+            <div class="person-card">
+              <img class="person-photo" src="https://images.pexels.com/photos/4584564/pexels-photo-4584564.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=180&amp;h=180&amp;fit=crop" alt="Indian female zonal officer stock portrait">
+              <div class="person-name">Sunitha M.</div>
+              <div class="person-role">Zonal officer · EE South</div>
+            </div>
+          </div>
+
+          <!-- Lifecycle timeline -->
+          <div class="mt-16">
+            <div class="text-xs text-mute mb-8">— LIFECYCLE STORY —</div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot tl-done" style="color:var(--success);"></div>
+                  <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Day 1 · Dec 12</div>
+                  <div class="timeline-event tl-done">✓ Complaint filed by citizen</div>
+                  <div class="timeline-note">Auto-tagged: Pothole · Priority: High · Ward 42</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot tl-done" style="color:var(--success);"></div>
+                  <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Day 2 · Dec 13</div>
+                  <div class="timeline-event tl-done">✓ Assigned to Officer Ravi K.</div>
+                  <div class="timeline-note">BBMP Roads Division — South Zone</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot" style="color:var(--warning);"></div>
+                  <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Day 3 · Dec 14</div>
+                  <div class="timeline-event" style="color:var(--warning);">⚡ AUTO-ESCALATED to Supervisor</div>
+                  <div class="timeline-note">No inspection within 24hrs · Escalation rule triggered</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot tl-done" style="color:var(--success);"></div>
+                  <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Day 5 · Dec 16</div>
+                  <div class="timeline-event tl-done">✓ Inspection completed</div>
+                  <div class="timeline-note">Severity confirmed: High · Contractor: M/s KR Roads</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot" style="color:var(--accent);"></div>
+                  <div class="timeline-line"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Day 9 · Dec 20</div>
+                  <div class="timeline-event tl-active">⟳ Work in progress</div>
+                  <div class="timeline-note">Why delayed: Budget approval took 4 days (Finance dept.)</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot-col">
+                  <div class="timeline-dot tl-pending" style="color:var(--ash);"></div>
+                </div>
+                <div class="timeline-content">
+                  <div class="timeline-day">Est. Day 12</div>
+                  <div class="timeline-event tl-pending">○ Expected completion</div>
+                  <div class="timeline-note">M/s KR Roads ETA: Dec 23</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transparency layer -->
+          <div class="card mt-16" style="border-color:rgba(255,159,10,0.3);background:rgba(255,159,10,0.05);">
+            <div class="text-xs text-mute mb-8">// SYSTEM TRANSPARENCY</div>
+            <div class="flex-gap-16 wrap text-sm">
+              <div><span class="text-mute">Why delayed:</span> <strong>Budget approval (4 days)</strong></div>
+              <div><span class="text-mute">Officer:</span> <strong>Ravi K., BBMP</strong></div>
+              <div><span class="text-mute">Contractor:</span> <strong>M/s KR Roads</strong></div>
+            </div>
+          </div>
+
+          <!-- Escalation ladder -->
+          <div class="mt-16">
+            <div class="text-xs text-mute mb-8">— ESCALATION PATH —</div>
+            <div class="escalation-rung">
+              <div class="esc-day">Day 3</div>
+              <div class="esc-label text-sm">Supervisor: Anand Rao, Deputy EE</div>
+              <div class="esc-badge" style="background:rgba(48,209,88,0.15);color:var(--success);">Done ✓</div>
+            </div>
+            <div class="escalation-rung">
+              <div class="esc-day">Day 7</div>
+              <div class="esc-label text-sm">Zonal Officer: Sunitha M., EE South</div>
+              <div class="esc-badge" style="background:rgba(255,159,10,0.15);color:var(--warning);">Active ⟳</div>
+            </div>
+            <div class="escalation-rung">
+              <div class="esc-day">Day 15</div>
+              <div class="esc-label text-sm">Publicly flagged — Ward Councillor notified</div>
+              <div class="esc-badge" style="background:var(--surface-card);color:var(--ash);">Pending ○</div>
+            </div>
+          </div>
+
+          <div class="flex-gap-8 mt-16">
+            <button class="btn-secondary btn-sm" onclick="addIssueUpdate(event, this)">Add Update</button>
+            <button class="btn-secondary btn-sm" onclick="rateResolution(event, this)">Rate Resolution</button>
+            <button class="btn-secondary btn-sm text-danger" style="margin-left:auto;" onclick="reopenIssue(event, this)">Reopen</button>
+          </div>
+        </div>
+
+        <!-- Complaint 2 — resolved -->
+        <div class="complaint-card" data-status="resolved" data-detail="Resolved case summary: sanitation team completed pickup in 4 days, citizen rating received, and no reopen request is pending.">
+          <div class="flex-between mb-8">
+            <div class="complaint-id">#BWA-2025-004799</div>
+            <span class="status-badge status-resolved">✓ Resolved</span>
+          </div>
+          <div class="complaint-title">🗑️ Garbage not collected — 3rd Main, JP Nagar</div>
+          <div class="complaint-meta">
+            <span>📍 Ward 38 · BBMP Sanitation</span>
+            <span>👥 23 affected</span>
+            <span>📅 Filed: Dec 10 · Resolved: Dec 14</span>
+            <span style="color:var(--success);">⭐ 4.2/5 citizen rating</span>
+          </div>
+        </div>
+
+        <!-- Complaint 3 — critical -->
+        <div class="complaint-card" data-status="filed" data-detail="Critical health-risk complaint: routed to BWSSB with expedited SLA, public-health notification, and higher escalation priority.">
+          <div class="flex-between mb-8">
+            <div class="complaint-id">#BWA-2025-004833</div>
+            <div class="flex-gap-8">
+              <span class="status-badge status-filed">Filed</span>
+              <span class="status-badge status-critical">🚨 CRITICAL</span>
+            </div>
+          </div>
+          <div class="complaint-title">💧 Water contamination — brown water in taps, Indiranagar</div>
+          <div class="complaint-meta">
+            <span>📍 Ward 28 · BWSSB</span>
+            <span>👥 142 affected</span>
+            <span>📅 Filed: Dec 20, 2025</span>
+          </div>
+          <div class="card mt-8" style="border-color:rgba(255,59,48,0.3);background:rgba(255,59,48,0.05);font-size:12px;color:var(--danger);">
+            [!] Health risk complaint — expedited processing · NGO Health Watch notified
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: TRUST SCORES           ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-trust" class="tab-content tab-panel">
+      <div class="trust-intro">
+        <div class="section-label">[+] Governance Trust Score System</div>
+        <div class="text-sm text-mute trust-formula">Formula: avg resolution time + % resolved + reopened rate + citizen feedback</div>
+      </div>
+
+      <div class="grid-3 trust-grid">
+        <!-- Ward 42 -->
+        <div class="trust-score-card">
+          <div class="text-xs text-mute mb-4">Ward 42 · Jayanagar</div>
+          <div class="trust-score-num text-success">71</div>
+          <div class="trust-bar"><div class="trust-fill trust-reliable" style="width:71%;"></div></div>
+          <div class="flex-between">
+            <span class="trust-label" style="background:rgba(48,209,88,0.15);color:var(--success);">Reliable ↑</span>
+            <span class="text-xs text-success">+5 this month</span>
+          </div>
+          <div class="text-xs text-mute mt-8">
+            Avg resolution: 8.4d · 67.6% resolved<br/>Reopens: 3.2% · Rating: 4.1/5
+          </div>
+        </div>
+
+        <!-- Ward 67 -->
+        <div class="trust-score-card">
+          <div class="text-xs text-mute mb-4">Ward 67 · Koramangala</div>
+          <div class="trust-score-num text-warning">48</div>
+          <div class="trust-bar"><div class="trust-fill trust-delayed" style="width:48%;"></div></div>
+          <div class="flex-between">
+            <span class="trust-label" style="background:rgba(255,159,10,0.15);color:var(--warning);">Delayed ↓</span>
+            <span class="text-xs text-danger">-8 this month</span>
+          </div>
+          <div class="text-xs text-mute mt-8">
+            Avg resolution: 14.2d · 51% resolved<br/>Reopens: 9.1% · Rating: 2.8/5
+          </div>
+        </div>
+
+        <!-- Ward 28 -->
+        <div class="trust-score-card">
+          <div class="text-xs text-mute mb-4">Ward 28 · Indiranagar</div>
+          <div class="trust-score-num text-danger">24</div>
+          <div class="trust-bar"><div class="trust-fill trust-critical" style="width:24%;"></div></div>
+          <div class="flex-between">
+            <span class="trust-label" style="background:rgba(255,59,48,0.15);color:var(--danger);">Critical ↓↓</span>
+            <span class="text-xs text-danger">-15 this month</span>
+          </div>
+          <div class="text-xs text-mute mt-8">
+            Avg resolution: 22.1d · 38% resolved<br/>Reopens: 18.4% · Rating: 1.9/5
+          </div>
+        </div>
+      </div>
+
+      <!-- Dept scores -->
+      <div class="dept-trust-section">
+        <div class="section-label">[+] Department Trust Scores</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="list-row">
+            <span class="list-marker">↑</span>
+            <div>
+              <span class="list-strong">BWSSB Water</span>
+              <span class="text-mute text-sm"> — 82/100 · Reliable</span>
+            </div>
+          </div>
+          <div class="list-row">
+            <span class="list-marker">↑</span>
+            <div>
+              <span class="list-strong">BESCOM Electricity</span>
+              <span class="text-mute text-sm"> — 76/100 · Reliable</span>
+            </div>
+          </div>
+          <div class="list-row">
+            <span class="list-marker">→</span>
+            <div>
+              <span class="list-strong">BBMP Roads</span>
+              <span class="text-mute text-sm"> — 61/100 · Moderate</span>
+            </div>
+          </div>
+          <div class="list-row">
+            <span class="list-marker">↓</span>
+            <div>
+              <span class="list-strong">BBMP Sanitation</span>
+              <span class="text-mute text-sm"> — 42/100 · Delayed</span>
+            </div>
+          </div>
+          <div class="list-row">
+            <span class="list-marker">↓</span>
+            <div>
+              <span class="list-strong">BBMP Parks</span>
+              <span class="text-mute text-sm"> — 31/100 · Critical</span>
+            </div>
+          </div>
+        </div>
+        <div class="ai-panel">
+          <div class="ai-panel-title">// AI TRUST ANALYSIS</div>
+          <div class="ai-insight">
+            <div class="ai-tag">ROOT_CAUSE · Ward 28</div>
+            <div class="ai-text">Contractor M/s Indiranagar Infra has 73% backlog rate. Replace contractor assignment.</div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-tag">RECOMMENDATION · BBMP Sanitation</div>
+            <div class="ai-text">Sanitation dept overwhelmed (92% workload). Needs 2 additional teams for Ward 42–67 zone.</div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-tag">POSITIVE_SIGNAL · BWSSB</div>
+            <div class="ai-text">New SLA monitoring system led to 20% faster water complaint resolution.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: AI INSIGHTS            ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-predict" class="tab-content tab-panel">
+      <div class="flex-between mb-16">
+        <div class="section-label" style="margin:0;">[+] AI-Powered Predictive Intelligence</div>
+        <button class="btn-primary btn-sm" onclick="runFullAI()">↻ Refresh Analysis</button>
+      </div>
+
+      <!-- AI Chat -->
+      <div class="grid-2 mb-24" style="gap:24px;">
+        <div>
+          <div class="section-label">[+] Ask AI about your ward</div>
+          <div id="ai-chat-msgs" style="background:var(--surface-soft);border:1px solid var(--hairline);border-radius:var(--r-sm);padding:16px;min-height:200px;max-height:300px;overflow-y:auto;margin-bottom:8px;font-size:13px;"></div>
+          <div style="display:flex;gap:8px;">
+            <input class="form-input" id="ai-chat-input" placeholder="e.g. Why are potholes in Ward 42 recurring?" style="flex:1;font-size:14px;" onkeydown="if(event.key==='Enter')sendAIChat()">
+            <button class="btn-primary" onclick="sendAIChat()">Ask</button>
+          </div>
+          <div class="flex-gap-8 mt-8" style="flex-wrap:wrap;">
+            <button class="map-layer-btn" onclick="askQuick('Why is Ward 28 trust score low?')">Why Ward 28 critical?</button>
+            <button class="map-layer-btn" onclick="askQuick('Predict pothole zones next month')">Predict potholes</button>
+            <button class="map-layer-btn" onclick="askQuick('Which department needs most help?')">Dept help needed?</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">[+] Predictive Alerts</div>
+          <div class="predict-card">
+            <div class="predict-icon">🕳️</div>
+            <div class="predict-content">
+              <div class="predict-title">Pothole Risk — Koramangala</div>
+              <div class="predict-detail">Heavy rain + 3 existing complaints = high probability of new potholes forming on 5th Ave by Jan 10</div>
+            </div>
+            <div class="predict-confidence">92% confident</div>
+          </div>
+          <div class="predict-card">
+            <div class="predict-icon">🗑️</div>
+            <div class="predict-content">
+              <div class="predict-title">Garbage Overflow — BTM Weekend</div>
+              <div class="predict-detail">Weekly pattern: Garbage overflows every Saturday night near BTM food street due to event waste</div>
+            </div>
+            <div class="predict-confidence">87% confident</div>
+          </div>
+          <div class="predict-card">
+            <div class="predict-icon">💧</div>
+            <div class="predict-content">
+              <div class="predict-title">Water Supply Risk — Indiranagar</div>
+              <div class="predict-detail">Aging pipeline (1987 installation) + 7 recent complaints = high probability of major failure Q1 2026</div>
+            </div>
+            <div class="predict-confidence">78% confident</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seasonal patterns -->
+      <div class="section-label">[+] Seasonal Issue Intelligence</div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="text-xs text-mute mb-8">MONSOON (Jun–Sep)</div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Potholes: <strong>+340%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Waterlogging: <strong>+520%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Electrical: <strong>+180%</strong></div></div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-mute mb-8">SUMMER (Mar–May)</div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Water shortage: <strong>+290%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Power cuts: <strong>+210%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[-]</span><div>Roads: <strong>Normal</strong></div></div>
+        </div>
+        <div class="card">
+          <div class="text-xs text-mute mb-8">FESTIVALS (Oct–Dec)</div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Garbage: <strong>+180%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[+]</span><div>Noise: <strong>+450%</strong></div></div>
+          <div class="list-row"><span class="list-marker">[-]</span><div>Roads: <strong>Normal</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════════════════════╗ -->
+    <!-- ║  TAB: SIMPLE MODE            ║ -->
+    <!-- ╚══════════════════════════════╝ -->
+    <div id="t-simple" class="tab-content tab-panel">
+      <div class="section-label">[+] Simple Reporting Mode — सरल रिपोर्टिंग</div>
+      <div class="text-sm text-mute mb-16">Icon-based reporting for easy use · कम साक्षरता के लिए अनुकूल</div>
+
+      <!-- Language selector -->
+      <div class="lang-strip mb-16">
+        <button class="lang-btn active" onclick="setSimpleLang(this,'en')">🇬🇧 English</button>
+        <button class="lang-btn" onclick="setSimpleLang(this,'kn')">🇮🇳 ಕನ್ನಡ</button>
+        <button class="lang-btn" onclick="setSimpleLang(this,'hi')">🇮🇳 हिंदी</button>
+        <button class="lang-btn" onclick="setSimpleLang(this,'ta')">🇮🇳 தமிழ்</button>
+        <button class="lang-btn" onclick="setSimpleLang(this,'te')">🇮🇳 తెలుగు</button>
+        <button class="lang-btn" onclick="setSimpleLang(this,'ml')">🇮🇳 മലയാളം</button>
+      </div>
+
+      <div class="icon-report-grid mb-24" id="simple-grid">
+        <button class="icon-report-btn" onclick="selectSimple(this,'pothole')">
+          <span class="big-icon">🕳️</span>
+          <span id="sl-pothole">Pothole / Road</span>
+        </button>
+        <button class="icon-report-btn" onclick="selectSimple(this,'garbage')">
+          <span class="big-icon">🗑️</span>
+          <span id="sl-garbage">Garbage</span>
+        </button>
+        <button class="icon-report-btn" onclick="selectSimple(this,'water')">
+          <span class="big-icon">💧</span>
+          <span id="sl-water">Water</span>
+        </button>
+        <button class="icon-report-btn" onclick="selectSimple(this,'power')">
+          <span class="big-icon">⚡</span>
+          <span id="sl-power">No Power</span>
+        </button>
+        <button class="icon-report-btn" onclick="selectSimple(this,'trees')">
+          <span class="big-icon">🌳</span>
+          <span id="sl-trees">Fallen Tree</span>
+        </button>
+        <button class="icon-report-btn" onclick="selectSimple(this,'drain')">
+          <span class="big-icon">🚿</span>
+          <span id="sl-drain">Drain / Sewage</span>
+        </button>
+      </div>
+
+      <!-- Big voice button -->
+      <div class="simple-voice-block">
+        <button class="voice-btn" id="simple-voice" onclick="toggleSimpleVoice()">
+          🎤 &nbsp; बोलकर बताएं / Speak to Report
+        </button>
+        <div class="text-xs text-mute simple-voice-status" id="simple-voice-status">Press and hold to record</div>
+      </div>
+
+      <button class="btn-primary" style="width:100%;font-size:18px;height:48px;" onclick="submitSimple()">
+        📤 Submit / जमा करें
+      </button>
+    </div>
+
+  </div><!-- end tabs -->
+</div><!-- end container -->
+
+<!-- ── FOOTER ── -->
+<footer style="border-top:1px solid var(--hairline);padding:32px 0;margin-top:64px;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--hairline);">
+      <div class="footer-links">
+        <a class="footer-link" href="#dashboard" onclick="showTab('dashboard');return false;">Open Data</a>
+        <a class="footer-link" href="#map" onclick="showTab('map');return false;">Problem Map</a>
+        <a class="footer-link" href="#predict" onclick="showTab('predict');return false;">AI Insights</a>
+        <a class="footer-link" href="#trust" onclick="showTab('trust');return false;">Trust Scores</a>
+        <a class="footer-link" href="#report" onclick="showTab('report');return false;">File Issue</a>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
+      <div class="text-xs text-mute">©2025 NagrikAwaz — Open Civic Intelligence · Not affiliated with BBMP/Government</div>
+      <div class="text-xs text-mute">
+        <a class="footer-link" href="#privacy" onclick="showInfo('Privacy');return false;">Privacy</a>
+        <a class="footer-link" href="#terms" onclick="showInfo('Terms');return false;">Terms</a>
+        <a class="footer-link" href="#open-source" onclick="showInfo('Open Source');return false;">Open Source</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<!-- ── NOTIFY BANNER ── -->
+<div class="notify-banner" id="notify-banner"></div>
+
+<script>
+// ── THEME TOGGLE ──
+let isDark = false;
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  document.getElementById('theme-btn').textContent = isDark ? '◑ Light' : '◑ Dark';
+  // Re-render sparklines with new colors
+  setTimeout(drawSparklines, 100);
+}
+
+// ── TAB SYSTEM ──
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+  updateNavState(id);
+  document.querySelector('.tab-shell')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+  if (id === 't-map') initMainMap();
+  if (id === 't-dashboard') setTimeout(drawSparklines, 100);
+  if (id === 't-predict') setTimeout(initAIChat, 100);
+}
+function showTab(name) {
+  const map = {report:'t-report',map:'t-map',dashboard:'t-dashboard',complaints:'t-complaints',trust:'t-trust',predict:'t-predict',simple:'t-simple'};
+  const id = map[name] || name;
+  const btn = [...document.querySelectorAll('.tab-btn')].find(b => b.getAttribute('onclick').includes(id));
+  if (btn) switchTab(btn, id);
+}
+function updateNavState(id) {
+  const navKey = id.replace('t-', '');
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.tab === navKey);
+  });
+  if (history.replaceState) history.replaceState(null, '', `#${navKey}`);
+}
+
+// ── HERO TYPING TITLE ──
+function initHeroTyping() {
+  const el = document.getElementById('hero-typing');
+  if (!el || el.dataset.typingReady) return;
+  el.dataset.typingReady = 'true';
+  const words = ['Naagrik Awaaz', 'नागरिक आवाज़'];
+  let wordIndex = 0;
+  let charIndex = words[0].length;
+  let deleting = true;
+
+  function tick() {
+    const word = words[wordIndex];
+    el.textContent = word.slice(0, charIndex);
+
+    if (deleting) {
+      charIndex--;
+      if (charIndex < 0) {
+        deleting = false;
+        wordIndex = (wordIndex + 1) % words.length;
+        charIndex = 0;
+      }
+    } else {
+      charIndex++;
+      if (charIndex > words[wordIndex].length) {
+        deleting = true;
+        setTimeout(tick, 1100);
+        return;
+      }
+    }
+
+    setTimeout(tick, deleting ? 55 : 95);
+  }
+
+  setTimeout(tick, 900);
+}
+
+// ── MAPS ──
+let miniMap, mainMap, miniMarker;
+let mapInited = false, mainMapInited = false;
+
+function initMiniMap() {
+  if (miniMap) return;
+  miniMap = L.map('mini-map').setView([12.9279, 77.5833], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19
+  }).addTo(miniMap);
+  miniMarker = L.marker([12.9279, 77.5833], {draggable: true}).addTo(miniMap);
+  miniMarker.on('dragend', e => {
+    const {lat, lng} = e.target.getLatLng();
+    document.getElementById('location-input').value = `${lat.toFixed(4)}, ${lng.toFixed(4)} — BBMP Ward 42`;
+    document.getElementById('loc-meta').textContent = `Ward: 42 · Zone: South · Authority: BBMP`;
+  });
+  miniMap.on('click', e => {
+    miniMarker.setLatLng(e.latlng);
+    document.getElementById('location-input').value = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)} — BBMP`;
+  });
+}
+
+function initMainMap() {
+  if (mainMapInited) return;
+  mainMapInited = true;
+  mainMap = L.map('map').setView([12.9279, 77.5833], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(mainMap);
+
+  const complaints = [
+    {pos:[12.9348,77.5900], title:'🕳️ Pothole', cat:'pothole', count:87, status:'wip'},
+    {pos:[12.9180,77.6080], title:'🗑️ Garbage Overflow', cat:'garbage', count:34, status:'filed'},
+    {pos:[12.9600,77.6400], title:'💧 Water Leak', cat:'water', count:12, status:'assigned'},
+    {pos:[12.9100,77.5700], title:'⚡ Power Cut', cat:'power', count:22, status:'resolved'},
+    {pos:[12.9450,77.5600], title:'🕳️ Pothole Cluster', cat:'pothole', count:45, status:'critical'},
+    {pos:[12.9700,77.5500], title:'🌳 Fallen Tree', cat:'tree', count:5, status:'assigned'},
+    {pos:[12.9200,77.6200], title:'🚿 Drain Blocked', cat:'drain', count:18, status:'wip'},
+    {pos:[12.9500,77.6100], title:'🕳️ Road Damage', cat:'pothole', count:31, status:'filed'},
+    {pos:[12.9350,77.5750], title:'🗑️ Garbage', cat:'garbage', count:8, status:'resolved'},
+    {pos:[12.9050,77.5950], title:'💧 Water Supply', cat:'water', count:67, status:'critical'},
+  ];
+
+  const colors = {pothole:'#ff3b30',garbage:'#ff9f0a',water:'#007aff',power:'#ff9f0a',tree:'#30d158',drain:'#646262',default:'#9a9898'};
+
+  complaints.forEach(c => {
+    const color = colors[c.cat] || colors.default;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="background:${color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${c.count}</div>`,
+      iconSize: [32, 32]
+    });
+    L.marker(c.pos, {icon}).addTo(mainMap)
+      .bindPopup(`<div style="font-family:monospace;font-size:13px;"><strong>${c.title}</strong><br/>👥 ${c.count} affected<br/>Status: ${c.status}</div>`);
+  });
+
+  // Systemic zones
+  L.circle([12.9348, 77.5900], {color:'#ff3b30',fillColor:'#ff3b30',fillOpacity:0.08,radius:400})
+    .addTo(mainMap).bindPopup('⚠️ Systemic Failure Zone — 18 complaints in 2 months');
+  L.circle([12.9180, 77.6080], {color:'#ff9f0a',fillColor:'#ff9f0a',fillOpacity:0.08,radius:300})
+    .addTo(mainMap).bindPopup('⚠️ Recurring Garbage Zone — Weekly spike');
+}
+
+// ── MAP LAYERS ──
+function toggleLayer(btn, layer) {
+  btn.classList.toggle('active');
+  if (layer === 'predict' && btn.classList.contains('active')) {
+    showTab('predict');
+    notify('[+] Predicted zones linked to AI Insights');
+    return;
+  }
+  notify(`[${btn.classList.contains('active')?'+':'-'}] Layer: ${layer}`);
+}
+
+// ── COMPLAINT FORM ──
+let selectedCat = 'Pothole';
+function selectCat(btn, icon, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCat = cat;
+  runAIClassify(cat);
+}
+
+function runAIClassify(cat) {
+  const panel = document.getElementById('ai-classify-panel');
+  panel.innerHTML = `<div class="ai-panel-title">// AI_ENGINE · classifying...</div><div class="ai-loading"><div class="spinner"></div> Analyzing...</div>`;
+  setTimeout(() => {
+    const depts = {Pothole:'BBMP Roads & Infrastructure',Garbage:'BBMP Solid Waste Mgmt',Water:'BWSSB Water Supply',Electricity:'BESCOM',Road:'BBMP Roads',Trees:'BBMP Horticulture',Sanitation:'BBMP Sanitation',Other:'BBMP General'};
+    panel.innerHTML = `
+      <div class="ai-panel-title">// AI_ENGINE · classification complete</div>
+      <div class="ai-insight"><div class="ai-tag">CATEGORY_DETECTED</div><div class="ai-text">Category: ${cat} — Confidence: ${85+Math.floor(Math.random()*12)}%</div></div>
+      <div class="ai-insight"><div class="ai-tag">AUTHORITY_ROUTED</div><div class="ai-text">${depts[cat]||depts.Other}</div></div>
+      <div class="ai-insight"><div class="ai-tag">PATTERN_MATCH</div><div class="ai-text">${Math.floor(Math.random()*20)+3} similar complaints nearby — systemic signal detected</div></div>
+      <div class="ai-insight"><div class="ai-tag">PRIORITY_SCORE</div><div class="ai-text">Priority: ${['High','Medium','High','Critical'][Math.floor(Math.random()*4)]} [${70+Math.floor(Math.random()*25)}/100]</div></div>
+      <button class="btn-secondary btn-sm mt-8" onclick="runAIAnalysis()" style="width:100%;">↻ Re-analyze</button>`;
+  }, 1200);
+}
+
+function runAIAnalysis() { runAIClassify(selectedCat); }
+
+function autoDetectLocation() {
+  notify('📍 Detecting location...');
+  setTimeout(() => {
+    document.getElementById('location-input').value = 'Jayanagar 4th Block, Bengaluru — BBMP Ward 42';
+    document.getElementById('loc-meta').textContent = 'Ward: 42 · Zone: South · Authority: BBMP · Detected via GPS';
+    notify('✓ Location detected: Ward 42, Jayanagar');
+  }, 1000);
+}
+
+function manualLocationUpdate() {
+  const value = document.getElementById('location-input').value.trim();
+  document.getElementById('loc-meta').textContent = value
+    ? 'Manual location entered · Ward lookup ready · Authority routing active'
+    : 'Enter an address or drop a pin on the map';
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('img-preview').innerHTML = `<img src="${ev.target.result}" style="max-height:80px;border-radius:4px;border:1px solid var(--hairline);">`;
+    notify('📸 Image attached — AI analyzing...');
+    setTimeout(() => notify('✓ AI: Pothole severity — High. Area: ~2sq ft'), 1500);
+  };
+  reader.readAsDataURL(file);
+}
+
+function joinIssue() {
+  const box = document.querySelector('.collective-box');
+  if (box && !box.querySelector('.expand-panel')) {
+    box.insertAdjacentHTML('beforeend', `
+      <div class="expand-panel">
+        You are now attached to the shared pothole case. Future updates will be merged into one stronger civic signal instead of creating duplicate complaints.
+        <div class="expand-panel-grid">
+          <div class="expand-metric"><div class="expand-label">Merged citizens</div><div class="expand-value">88</div></div>
+          <div class="expand-metric"><div class="expand-label">Escalation weight</div><div class="expand-value">High</div></div>
+          <div class="expand-metric"><div class="expand-label">Next review</div><div class="expand-value">24h</div></div>
+        </div>
+      </div>`);
+  }
+  notify('✓ You joined the Jayanagar pothole complaint. 88 citizens now affected.');
+}
+
+let isRecording = false;
+function toggleVoice() {
+  isRecording = !isRecording;
+  const btn = document.getElementById('voice-btn');
+  if (isRecording) {
+    btn.classList.add('recording');
+    btn.textContent = '⏹ Recording...';
+    setTimeout(() => {
+      isRecording = false;
+      btn.classList.remove('recording');
+      btn.textContent = '🎤 Voice Input';
+      document.getElementById('complaint-desc').value = 'Large pothole on the road near Jayanagar 4th block main road, very dangerous for two-wheelers, at least 2 feet wide and 6 inches deep.';
+      notify('✓ Voice transcribed — AI classified as: Pothole (High Priority)');
+      runAIClassify('Pothole');
+    }, 3000);
+  } else {
+    btn.classList.remove('recording');
+    btn.textContent = '🎤 Voice Input';
+  }
+}
+
+function translateText() {
+  const desc = document.getElementById('complaint-desc').value;
+  if (!desc) { notify('[!] Enter text first to translate'); return; }
+  notify('🌐 Translating to Kannada...');
+  setTimeout(() => notify('✓ Translation: "ಜಯನಗರ 4ನೇ ಬ್ಲಾಕ್ ಮೈನ್ ರಸ್ತೆಯಲ್ಲಿ ದೊಡ್ಡ ಗುಂಡಿ"'), 1200);
+}
+
+function setLang(btn, lang) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function clearForm() {
+  document.getElementById('complaint-desc').value = '';
+  document.getElementById('img-preview').innerHTML = '';
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.cat-btn').classList.add('selected');
+  selectedCat = 'Pothole';
+  notify('Form cleared. Ready for a new issue.');
+}
+
+let cmpCount = 4834;
+function submitComplaint() {
+  cmpCount++;
+  const id = `#BWA-2025-00${cmpCount}`;
+  notify(`✓ Complaint ${id} filed! Est. resolution: 7–10 days. BBMP notified.`);
+  setTimeout(() => notify(`[i] ${id} — 88 citizens already affected. Your complaint merged.`), 3500);
+}
+
+// ── WARD / TRUST ──
+function selectWard(btn, ward) {
+  document.querySelectorAll('.ward-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = {42:'Jayanagar focus: roads and potholes trending up',67:'Koramangala focus: sanitation workload is rising',28:'Indiranagar focus: critical water infrastructure risk',55:'BTM Layout focus: power and drainage clusters',all:'Citywide view: all wards combined'};
+  notify(`[i] ${labels[ward] || btn.textContent}`);
+}
+
+// ── SPARKLINES ──
+function drawSparklines() {
+  drawSparkline('spark1', [120,145,132,167,189,210,198,234,220,245,267,291]);
+  drawSparkline('spark2', [80,90,88,110,125,140,132,160,148,172,182,200]);
+  drawSparkline('spark3', [14,13,15,12,11,10,11,9,8,9,8,8], true);
+}
+
+function drawSparkline(id, data, invert=false) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const max = Math.max(...data), min = Math.min(...data);
+  const pad = 4;
+  const color = getComputedStyle(document.body).getPropertyValue('--ink').trim() || '#201d1d';
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+  data.forEach((v,i) => {
+    const x = pad + (i/(data.length-1)) * (w-pad*2);
+    const y = invert
+      ? pad + ((v-min)/(max-min)) * (h-pad*2)
+      : (h-pad) - ((v-min)/(max-min)) * (h-pad*2);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // Dots
+  ctx.fillStyle = color;
+  data.forEach((v,i) => {
+    if (i===0 || i===data.length-1) {
+      const x = pad + (i/(data.length-1)) * (w-pad*2);
+      const y = invert ? pad + ((v-min)/(max-min)) * (h-pad*2) : (h-pad) - ((v-min)/(max-min)) * (h-pad*2);
+      ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+// ── CATEGORY BARS ──
+function drawCategoryBars() {
+  const cats = [
+    {name:'🕳️ Potholes',count:892,pct:31},
+    {name:'🗑️ Garbage',count:634,pct:22},
+    {name:'💧 Water',count:521,pct:18},
+    {name:'⚡ Electricity',count:418,pct:15},
+    {name:'🚧 Roads',count:230,pct:8},
+    {name:'🌳 Trees',count:152,pct:5},
+  ];
+  const el = document.getElementById('category-bars');
+  if (!el) return;
+  el.innerHTML = cats.map(c => `
+    <div class="workload-bar-wrap is-clickable" tabindex="0" data-detail="${c.name}: ${c.count} complaints. Clicked category filters the map and primes AI analysis.">
+      <div class="workload-label text-xs">${c.name}</div>
+      <div class="workload-track"><div class="workload-fill" style="width:${c.pct*2.5}%;background:var(--ink);"></div></div>
+      <div class="text-xs text-mute">${c.count}</div>
+    </div>`).join('');
+  setupInteractiveCards();
+}
+
+// ── AI CHAT ──
+const aiResponses = {
+  'ward 28': 'Ward 28 (Indiranagar) has a critical trust score of 24/100 primarily due to contractor M/s Indiranagar Infra having a 73% backlog rate. Additionally, the aging water infrastructure (1987-era pipes) is causing repeated complaints. Recommended action: Contractor replacement + emergency infrastructure audit.',
+  'pothole': 'Based on historical data + rainfall prediction, pothole formation probability is HIGH in: (1) Koramangala 5th Ave — 92% confidence by Jan 10, (2) BTM Layout Ring Road — 85% by Jan 15, (3) Jayanagar 4th Main — 78% by Jan 20. Recommend pre-emptive patching before rains.',
+  'department': 'BBMP Sanitation needs immediate help — operating at 92% workload capacity. Current backlog: 234 complaints. Suggested: Add 2 collection teams for Ward 42-67 zone. BBMP Roads also at 78% — consider contractor diversification. BWSSB and BESCOM performing well.',
+  'default': 'Based on NagrikAwaz data for Bengaluru: The top systemic issue is pothole recurrence in monsoon zones. Ward-level trust scores show South Bangalore underperforming. I recommend focusing escalation efforts on BBMP Roads Division which has the longest average resolution time (14.2 days vs 8.4 day target).'
+};
+
+function initAIChat() {
+  const msgs = document.getElementById('ai-chat-msgs');
+  if (!msgs || msgs.innerHTML) return;
+  msgs.innerHTML = `<div style="color:var(--mute);font-size:12px;margin-bottom:8px;">// NAGRIK_AWAZ_AI · Civic Intelligence Engine</div><div style="margin-bottom:8px;"><span style="color:var(--mute)">AI:</span> Hello! I have analyzed data from 2,847 complaints across Bengaluru. Ask me about ward performance, systemic patterns, or predictions.</div>`;
+}
+
+function sendAIChat() {
+  const input = document.getElementById('ai-chat-input');
+  const msgs = document.getElementById('ai-chat-msgs');
+  const q = input.value.trim();
+  if (!q) return;
+  msgs.innerHTML += `<div style="margin-bottom:8px;text-align:right;"><span style="color:var(--ink);font-weight:500;">You:</span> ${q}</div>`;
+  msgs.innerHTML += `<div style="margin-bottom:8px;"><span style="color:var(--mute)">AI:</span> <span class="spinner" style="display:inline-block;"></span></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  input.value = '';
+
+  const lq = q.toLowerCase();
+  let answer = aiResponses.default;
+  if (lq.includes('ward 28') || lq.includes('critical') || lq.includes('trust')) answer = aiResponses['ward 28'];
+  else if (lq.includes('pothole') || lq.includes('predict') || lq.includes('road')) answer = aiResponses.pothole;
+  else if (lq.includes('department') || lq.includes('dept') || lq.includes('help')) answer = aiResponses.department;
+
+  setTimeout(() => {
+    callClaudeAI(q, answer, msgs);
+  }, 500);
+}
+
+function askQuick(q) {
+  document.getElementById('ai-chat-input').value = q;
+  sendAIChat();
+}
+
+async function callClaudeAI(question, fallback, msgs) {
+  // Remove spinner
+  const lastMsg = msgs.lastElementChild;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are NagrikAwaz AI, a civic intelligence assistant for India's governance platform. You help citizens understand civic issues, complaint patterns, ward-level governance data, and infrastructure problems in Indian cities (especially Bengaluru/BBMP). Be concise, specific, and use data-driven insights. Keep answers under 100 words. Speak like a helpful civic analyst.`,
+        messages: [{role:'user', content: question}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(i => i.text||'').join('') || fallback;
+    if (lastMsg) lastMsg.innerHTML = `<span style="color:var(--mute)">AI:</span> ${text}`;
+  } catch(e) {
+    if (lastMsg) lastMsg.innerHTML = `<span style="color:var(--mute)">AI:</span> ${fallback}`;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function runFullAI() {
+  notify('↻ Running full AI analysis across all wards...');
+  setTimeout(() => notify('✓ AI analysis complete — 3 new predictions, 2 systemic alerts'), 2000);
+}
+
+// ── INTERACTIVE CARDS / ACTIONS ──
+function isInsideControl(e) {
+  return e.target.closest('button,a,input,select,textarea,label,.leaflet-container');
+}
+
+function getCardDetail(el) {
+  if (el.dataset.detail) return el.dataset.detail;
+  if (el.classList.contains('trust-score-card')) {
+    const ward = el.querySelector('.text-xs')?.textContent || 'Ward';
+    const score = el.querySelector('.trust-score-num')?.textContent || '--';
+    return `${ward} currently scores ${score}/100. Expanded view shows why the score moved and what action is recommended next.`;
+  }
+  if (el.classList.contains('predict-card')) {
+    return 'Predictive alert expanded: this signal combines complaint frequency, historical seasonality, and department workload to recommend preventive action.';
+  }
+  if (el.classList.contains('impact-row')) {
+    return 'Citizen impact expanded: this metric is tied to verified issue closures, joined complaints, and response-time improvements for the selected ward.';
+  }
+  if (el.classList.contains('person-card')) {
+    const name = el.querySelector('.person-name')?.textContent || 'Officer';
+    return `${name} profile opened: assignment history, current workload, and escalation accountability are available in the issue lifecycle.`;
+  }
+  if (el.classList.contains('pattern-row')) {
+    return 'Pattern expanded: this recurring issue can be opened on the map, escalated, or used to start a joined complaint.';
+  }
+  if (el.classList.contains('list-row')) {
+    return 'Record expanded: this line item links to supporting trend data, SLA status, and the responsible civic department.';
+  }
+  return 'Expanded detail: this card is active. Use it to inspect context, compare signals, and continue into the relevant workflow.';
+}
+
+function toggleExpand(el, detail) {
+  const existing = el.querySelector(':scope > .expand-panel');
+  document.querySelectorAll('.is-expanded').forEach(open => {
+    if (open !== el) {
+      open.classList.remove('is-expanded');
+      open.querySelector(':scope > .expand-panel')?.remove();
+    }
+  });
+  if (existing) {
+    existing.remove();
+    el.classList.remove('is-expanded');
+    return;
+  }
+  el.classList.add('is-expanded');
+  el.insertAdjacentHTML('beforeend', `
+    <div class="expand-panel">
+      ${detail}
+      <div class="expand-panel-grid">
+        <div class="expand-metric"><div class="expand-label">Status</div><div class="expand-value">Active</div></div>
+        <div class="expand-metric"><div class="expand-label">SLA signal</div><div class="expand-value">Tracked</div></div>
+        <div class="expand-metric"><div class="expand-label">Next action</div><div class="expand-value">Available</div></div>
+      </div>
+      <div class="inline-action-row">
+        <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); showTab('map')">Open Map</button>
+        <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); showTab('predict')">Ask AI</button>
+        <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); notify('Pinned for follow-up in this demo view.')">Pin</button>
+      </div>
+    </div>`);
+}
+
+function setupInteractiveCards() {
+  const selectors = [
+    '.complaint-card',
+    '.trust-score-card',
+    '.impact-row',
+    '.predict-card',
+    '.pattern-row',
+    '.person-card',
+    '#t-dashboard .card',
+    '#t-trust .list-row',
+    '#t-predict .card',
+    '#category-bars .workload-bar-wrap'
+  ].join(',');
+  document.querySelectorAll(selectors).forEach(el => {
+    if (el.dataset.interactiveReady) return;
+    el.dataset.interactiveReady = 'true';
+    el.classList.add('is-clickable');
+    el.tabIndex = el.tabIndex >= 0 ? el.tabIndex : 0;
+    el.addEventListener('click', e => {
+      if (isInsideControl(e)) return;
+      e.stopPropagation();
+      toggleExpand(el, getCardDetail(el));
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleExpand(el, getCardDetail(el));
+      }
+    });
+  });
+}
+
+function addIssueUpdate(e, btn) {
+  e.stopPropagation();
+  const card = btn.closest('.complaint-card');
+  toggleExpand(card, `
+    Add update mode is active. Latest note saved locally for this demo: "Inspection photos requested from contractor and ward officer."
+    <div class="expand-panel-grid">
+      <div class="expand-metric"><div class="expand-label">Update type</div><div class="expand-value">Officer note</div></div>
+      <div class="expand-metric"><div class="expand-label">Visibility</div><div class="expand-value">Public</div></div>
+      <div class="expand-metric"><div class="expand-label">Timestamp</div><div class="expand-value">Now</div></div>
+    </div>`);
+  notify('Update panel opened for this issue.');
+}
+
+function rateResolution(e, btn) {
+  e.stopPropagation();
+  const card = btn.closest('.complaint-card');
+  toggleExpand(card, `
+    Rate this resolution:
+    <div class="inline-action-row">
+      ${[1,2,3,4,5].map(n => `<button class="rating-btn" onclick="event.stopPropagation(); saveRating(this, ${n})">${n}★</button>`).join('')}
+    </div>`);
+}
+
+function saveRating(btn, rating) {
+  btn.parentElement.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  notify(`Thanks. Rating saved as ${rating}/5 for this demo issue.`);
+}
+
+function reopenIssue(e, btn) {
+  e.stopPropagation();
+  const card = btn.closest('.complaint-card');
+  const status = card.querySelector('.status-badge');
+  if (status) {
+    status.className = 'status-badge status-filed';
+    status.textContent = 'Reopened';
+  }
+  card.dataset.status = 'filed';
+  toggleExpand(card, 'Issue reopened. It has been moved back into the Filed queue and will be escalated if no officer response is logged within 24 hours.');
+  filterComplaints();
+  notify('Issue reopened and moved to Filed.');
+}
+
+function filterComplaints() {
+  const q = (document.getElementById('issue-search')?.value || '').toLowerCase();
+  const filter = (document.getElementById('issue-filter')?.value || 'All Status').toLowerCase();
+  let visible = 0;
+  document.querySelectorAll('#complaint-list .complaint-card').forEach(card => {
+    const text = card.textContent.toLowerCase();
+    const status = card.dataset.status || '';
+    const matchesText = !q || text.includes(q);
+    const matchesStatus = filter === 'all status' || status.includes(filter.replace('in progress', 'wip'));
+    const show = matchesText && matchesStatus;
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  notify(`${visible} issue${visible === 1 ? '' : 's'} shown.`);
+}
+
+function showInfo(label) {
+  notify(`${label} panel opened. This demo links the footer item to the active app shell.`);
+}
+
+// ── SIMPLE MODE ──
+const translations = {
+  kn: {pothole:'ರಸ್ತೆ ಗುಂಡಿ',garbage:'ಕಸ',water:'ನೀರು',power:'ವಿದ್ಯುತ್ ಇಲ್ಲ',trees:'ಮರ ಬಿದ್ದಿದೆ',drain:'ಚರಂಡಿ'},
+  hi: {pothole:'सड़क में गड्ढा',garbage:'कचरा',water:'पानी',power:'बिजली नहीं',trees:'पेड़ गिरा',drain:'नाली'},
+  ta: {pothole:'குழி',garbage:'குப்பை',water:'தண்ணீர்',power:'மின்சாரம் இல்லை',trees:'மரம் விழுந்தது',drain:'சாக்கடை'},
+  en: {pothole:'Pothole / Road',garbage:'Garbage',water:'Water',power:'No Power',trees:'Fallen Tree',drain:'Drain / Sewage'},
+};
+
+function setSimpleLang(btn, lang) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const t = translations[lang] || translations.en;
+  Object.entries(t).forEach(([k,v]) => {
+    const el = document.getElementById(`sl-${k}`);
+    if (el) el.textContent = v;
+  });
+}
+
+let simpleSelected = null;
+function selectSimple(btn, type) {
+  document.querySelectorAll('.icon-report-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  simpleSelected = type;
+}
+
+let simpleVoiceActive = false;
+function toggleSimpleVoice() {
+  simpleVoiceActive = !simpleVoiceActive;
+  const btn = document.getElementById('simple-voice');
+  const status = document.getElementById('simple-voice-status');
+  if (simpleVoiceActive) {
+    btn.classList.add('recording');
+    btn.innerHTML = '⏹ &nbsp; Recording...';
+    status.textContent = 'Speaking... press again to stop';
+    setTimeout(() => {
+      simpleVoiceActive = false;
+      btn.classList.remove('recording');
+      btn.innerHTML = '🎤 &nbsp; बोलकर बताएं / Speak to Report';
+      status.textContent = '✓ Voice recorded — Ready to submit';
+      notify('✓ Voice input captured — AI classified: Pothole, High Priority');
+    }, 3000);
+  } else {
+    btn.classList.remove('recording');
+    btn.innerHTML = '🎤 &nbsp; बोलकर बताएं / Speak to Report';
+    status.textContent = 'Press and hold to record';
+  }
+}
+
+function submitSimple() {
+  if (!simpleSelected) { notify('[!] Please select an issue type first'); return; }
+  cmpCount++;
+  notify(`✓ Issue filed! ID: #BWA-2025-00${cmpCount}. SMS confirmation sent.`);
+}
+
+// ── NOTIFICATIONS ──
+let notifyTimer;
+function notify(msg) {
+  const el = document.getElementById('notify-banner');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifyTimer);
+  notifyTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  initHeroTyping();
+  initMiniMap();
+  drawSparklines();
+  drawCategoryBars();
+  initAIChat();
+  setupInteractiveCards();
+
+  // Animate hero stats
+  animateNum('stat-total', 0, 2847, 1500);
+  animateNum('stat-resolved', 0, 1923, 1500);
+
+  const initial = location.hash.replace('#', '');
+  if (initial) setTimeout(() => showTab(initial), 150);
+});
+
+function animateNum(id, from, to, dur) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const prog = Math.min((Date.now()-start)/dur, 1);
+    const val = Math.floor(from + (to-from) * easeOut(prog));
+    el.textContent = id === 'stat-days' ? '8.4d' : val.toLocaleString();
+    if (prog >= 1) clearInterval(timer);
+  }, 16);
+}
+
+function easeOut(t) { return 1 - Math.pow(1-t, 3); }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey) {
+    if (e.key==='m') { e.preventDefault(); switchTab(document.querySelectorAll('.tab-btn')[1],'t-map'); }
+    if (e.key==='a') { e.preventDefault(); switchTab(document.querySelectorAll('.tab-btn')[5],'t-predict'); }
+    if (e.key==='v') { e.preventDefault(); switchTab(document.querySelectorAll('.tab-btn')[6],'t-simple'); }
+  }
+});
+</script>
+</body>
+</html>
